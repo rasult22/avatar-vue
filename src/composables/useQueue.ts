@@ -24,8 +24,8 @@ export default function useQueue<T>(initialValue: T[] = []) {
     add,
     remove,
     clear,
-    first: queue[0],
-    last: queue[queue.value.length - 1],
+    first: computed<T>(() => queue.value[0]),
+    last: computed<T>(() => queue.value[queue.value.length - 1]),
     size: computed(() => queue.value.length),
     queue,
   };

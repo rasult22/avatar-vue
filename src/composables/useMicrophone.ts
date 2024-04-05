@@ -27,7 +27,7 @@ export default function useMicrophone() {
   watch(microphone, (val) => {
     if (val) {
       val.ondataavailable = (e) => {
-        if (microphoneIsOpen) {
+        if (microphoneIsOpen.value) {
           enqueueBlob(e.data);
         }
       };
@@ -78,5 +78,6 @@ const startMicrophone = () => {
   } else {
     microphone.value.start(250);
   }
+  microphoneIsOpen.value = true
   isRecording.value = true
 };

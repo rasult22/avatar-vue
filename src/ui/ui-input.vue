@@ -1,10 +1,18 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, toRefs, watch } from 'vue';
 
 const props = defineProps(['modelValue']);
+const {modelValue} = toRefs(props)
 const emit = defineEmits(['update:modelValue']);
 
-let text = ref(props.modelValue)
+watch(modelValue, (val) => {
+  if (modelValue.value !== text.value) {
+    text.value = modelValue.value
+  }
+})
+
+let text = ref(modelValue.value)
+
 watch(text, (val) => {
   emit('update:modelValue', val)
 })

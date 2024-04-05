@@ -1,17 +1,57 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import UIButton from '@/ui/ui-button.vue';
 import UIInput from '@/ui/ui-input.vue'
 import UISpinner from '@/ui/ui-spinner.vue'
 import {useAvatar} from '@/composables/useAvatar'
 import useMicroPhone from '@/composables/useMicrophone'
+import useDeepgram from '@/composables/useDeepgram'
 
-const {isRecording, microphoneIsOpen, queue, queueSize, startMicrophone, stopMicrophone} = useMicroPhone()
+let isProcessing = ref(false)
+const {connection, isConnecting, transcript, connectionIsReady} = useDeepgram()
+const {isRecording, microphoneIsOpen, queue, microphone, firstBlob, removeBlob, queueSize, startMicrophone, stopMicrophone} = useMicroPhone()
 const videoRef = ref<HTMLVideoElement>()
 const {isLoading, isGenerating, iceConnectionState,closeConnection, state, isError, errorMessage, mediaCanPlay, generateVoice, start} = useAvatar(videoRef)
 let text = ref('Салам Азамат, как дела?')
 const generate = () => {
   generateVoice(text.value)
+}
+
+const processQueue = () => {
+  if (queueSize.value > 0 && !isProcessing.value) {
+    isProcessing.value = true
+
+    if (connectionIsReady.value) {
+      const nextBlob = firstBlob.value;
+
+      if (nextBlob && nextBlob.size > 0) {
+        connection.value.send(nextBlob)
+      }
+      removeBlob()
+    }
+    // timeout?
+    isProcessing.value = false
+  }
+}
+
+watch(queueSize, () => {
+  processQueue()
+})
+
+watch(transcript, (val) => {
+  if (val.isFinal) {
+    text.value = val.text
+  }
+})
+
+const onStopRecording = () => {
+  stopMicrophone()
+  setTimeout(() => {
+    if (!isRecording && !transcript.value.isFinal && transcript.value.text !== text.value)  {
+      console.log('this case')
+      text.value = transcript.value.text
+    }
+  }, 1000)
 }
 
 </script>
@@ -34,7 +74,7 @@ const generate = () => {
       </UIButton>
     </div>
     <video ref="videoRef" class="my-4 w-full max-h-[400px] min-h-[300px] flex border max-w-[300px]" autoPlay playsInline></video>
-    <UIButton @mousedown="startMicrophone" @mouseup="stopMicrophone">
+    <UIButton @mousedown="startMicrophone" @mouseup="onStopRecording">
       <div class="flex items-center space-x-2">
         <span>Start Recording</span>
         <UISpinner v-if="isRecording" />
@@ -50,11 +90,20 @@ const generate = () => {
         <p>errorMessage: {{ errorMessage }}</p>
       </div>
       <div class="bg-slate-200 font-mono p-4 w-[400px] h-[200px] mt-4">
-        <h1 class="font-bold text-[20px]">MicrophoneInfo</h1>
+        <h1 class="font-bold text-[20px]">Microphone Info</h1>
         <p>isRecording: {{ isRecording }}</p>
+        <p>microphone: {{ microphone && microphone.state }}</p>
         <p>microphoneIsOpen: {{ microphoneIsOpen }}</p>
         <p>queue: {{ queue }}</p>
         <p>queueSize: {{ queueSize }}</p>
+      </div>
+      <div class="bg-slate-200 font-mono p-4 w-[400px] h-[200px] mt-4">
+        <h1 class="font-bold text-[20px]">Deepgram API</h1>
+        <p>transcript: {{ transcript }}</p>
+        <p>isProcessing: {{ isProcessing }}</p>
+        <p>connection: {{ connection !== undefined   }}</p>
+        <p>isConnecting: {{ isConnecting }}</p>
+        <p>connectionIsReady: {{ connectionIsReady }}</p>
       </div>
     </div>
   </div>
