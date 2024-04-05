@@ -6,9 +6,11 @@ import UISpinner from '@/ui/ui-spinner.vue'
 import {useAvatar} from '@/composables/useAvatar'
 import useMicroPhone from '@/composables/useMicrophone'
 import useDeepgram from '@/composables/useDeepgram'
+import useOpenAI from '@/composables/useOpenAI';
 
 let isProcessing = ref(false)
-const {connection, isConnecting, transcript, connectionIsReady} = useDeepgram()
+const {sendMessage, messages, currentMessage, gtpIsStreaming, currentWord, textQueue} = useOpenAI()
+const {connection, isConnecting, transcript, connectionIsReady} = useDeepgram('ru')
 const {isRecording, microphoneIsOpen, queue, microphone, firstBlob, removeBlob, queueSize, startMicrophone, stopMicrophone} = useMicroPhone()
 const videoRef = ref<HTMLVideoElement>()
 const {isLoading, isGenerating, iceConnectionState,closeConnection, state, isError, errorMessage, mediaCanPlay, generateVoice, start} = useAvatar(videoRef)
@@ -16,6 +18,13 @@ let text = ref('Салам Азамат, как дела?')
 const generate = () => {
   generateVoice(text.value)
 }
+
+watch([currentMessage, gtpIsStreaming], ([value]) => {
+  if (value && !gtpIsStreaming.value) {
+    generateVoice(value)
+    currentMessage.value = ""
+  }
+})
 
 const processQueue = () => {
   if (queueSize.value > 0 && !isProcessing.value) {
@@ -41,6 +50,8 @@ watch(queueSize, () => {
 watch(transcript, (val) => {
   if (val.isFinal) {
     text.value = val.text
+    // call openAI
+    sendMessage(text.value)
   }
 })
 
@@ -74,14 +85,22 @@ const onStopRecording = () => {
       </UIButton>
     </div>
     <video ref="videoRef" class="my-4 w-full max-h-[400px] min-h-[300px] flex border max-w-[300px]" autoPlay playsInline></video>
-    <UIButton @mousedown="startMicrophone" @mouseup="onStopRecording">
+    <UIButton @touchstart="startMicrophone" @touchend="onStopRecording" @mousedown="startMicrophone" @mouseup="onStopRecording">
       <div class="flex items-center space-x-2">
         <span>Start Recording</span>
         <UISpinner v-if="isRecording" />
       </div>
     </UIButton>
     <div class="flex flex-wrap justify-center">
-      <div class="bg-slate-200 font-mono p-4 w-[400px] h-[200px] mt-4">
+      <div class="bg-slate-200 font-mono p-4 w-[400px] min-h-[200px] mt-4">
+        <h1 class="font-bold text-[20px]">OpenAI</h1>
+        <p>textQueue: {{ textQueue }}</p>
+        <p>currentWord: {{ currentWord }}</p>
+        <p>currentMessage: {{ currentMessage }}</p>
+        <p>messages: {{ messages }}</p>
+        <p>gtpIsStreaming: {{ gtpIsStreaming }}</p>
+      </div>
+      <div class="bg-slate-200 font-mono p-4 w-[400px] min-h-[200px] mt-4">
         <h1 class="font-bold text-[20px]">HeyGen RTC connection</h1>
         <p>isLoading: {{ isLoading }}</p>
         <p>isGenerating: {{ isGenerating }}</p>
@@ -89,7 +108,7 @@ const onStopRecording = () => {
         <p>isError: {{ isError }}</p>
         <p>errorMessage: {{ errorMessage }}</p>
       </div>
-      <div class="bg-slate-200 font-mono p-4 w-[400px] h-[200px] mt-4">
+      <div class="bg-slate-200 font-mono p-4 w-[400px] min-h-[200px] mt-4">
         <h1 class="font-bold text-[20px]">Microphone Info</h1>
         <p>isRecording: {{ isRecording }}</p>
         <p>microphone: {{ microphone && microphone.state }}</p>
@@ -97,7 +116,7 @@ const onStopRecording = () => {
         <p>queue: {{ queue }}</p>
         <p>queueSize: {{ queueSize }}</p>
       </div>
-      <div class="bg-slate-200 font-mono p-4 w-[400px] h-[200px] mt-4">
+      <div class="bg-slate-200 font-mono p-4 w-[400px] min-h-[200px] mt-4">
         <h1 class="font-bold text-[20px]">Deepgram API</h1>
         <p>transcript: {{ transcript }}</p>
         <p>isProcessing: {{ isProcessing }}</p>

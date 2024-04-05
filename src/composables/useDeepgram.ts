@@ -33,20 +33,10 @@ const getApiKey = async (): Promise<string> => {
   // const result: CreateProjectKeyResponse = await (
   //   await fetch("/api/authenticate", { cache: "no-store" })
   // ).json();
+  return "";
 
 };
 
-const ttsOptions = ref<SpeakSchema>({
-  model: "aura-asteria-en",
-});
-const sttOptions = ref<LiveSchema>({
-  model: "nova-2",
-  interim_results: true,
-  smart_format: true,
-  endpointing: 350,
-  utterance_end_ms: 1000,
-  filler_words: true,
-});
 const connection = ref<LiveClient>();
 const isConnecting = ref(false);
 const connectionIsReady = ref(false);
@@ -63,8 +53,11 @@ const connect = async () => {
     console.log('connect inner')
     connection.value = new LiveClient(
       await getApiKey(),
-      {},
       {
+        
+      },
+      {
+        language: 'ru',
         model: "nova-2",
         interim_results: true,
         smart_format: true,
@@ -137,7 +130,7 @@ const clear = () => {
   }
 }
 
-export default function useDeepgram() {
+export default function useDeepgram(lang: 'ru' | 'en') {
   console.log('run hook')
   const start = async () => {
     await connect()
