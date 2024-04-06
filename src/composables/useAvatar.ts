@@ -14,6 +14,7 @@ type SessionInfo = {
   session_id: string;
 };
 
+const shouldRenderCanvas =ref(true)
 const isError = ref(false);
 const state = ref<'started' | 'stopped'>('stopped')
 const errorMessage = ref('');
@@ -26,14 +27,14 @@ const remoteStream = ref<MediaStream>();
 const triggerRemoteStream = ref(0)
 const iceConnectionState = ref<RTCIceConnectionState>();
 
-export const useAvatar = (incomingVideoRef: Ref<HTMLVideoElement | undefined>) => {
+export const useAvatar = (incomingVideoRef: Ref<HTMLVideoElement | undefined>, incomingCanvasRef: Ref<HTMLCanvasElement | undefined>) => {
   const start =  async() => {
     isLoading.value = true;
     await checkSessionsAndCloseIfExists()
     // create new session
     await new Promise((res, rej) => {
       setTimeout(async () => {
-        await createNewSession(incomingVideoRef)
+        await createNewSession(incomingVideoRef, incomingCanvasRef)
         res(1)
       },300)
     })
@@ -57,6 +58,7 @@ export const useAvatar = (incomingVideoRef: Ref<HTMLVideoElement | undefined>) =
     sessionInfo,
     peerConnection,
     remoteStream,
+    renderCanvas,
     triggerRemoteStream,
     closeConnection: closeConnectionHandler,
     iceConnectionState,
@@ -70,7 +72,7 @@ export const useAvatar = (incomingVideoRef: Ref<HTMLVideoElement | undefined>) =
   };
 };
 
-const createNewSession = async (videoRef: Ref<HTMLVideoElement | undefined>) => {
+const createNewSession = async (videoRef: Ref<HTMLVideoElement | undefined>, canvasRef: Ref<HTMLCanvasElement | undefined>) => {
   const avatarID = process.env.VUE_APP_HEYGEN_AVATAR_ID || '';
   const voiceID = process.env.VUE_APP_HEYGEN_VOICE_ID || '';
 
@@ -95,6 +97,12 @@ const createNewSession = async (videoRef: Ref<HTMLVideoElement | undefined>) => 
           if (videoRef.value.paused)  {
             videoRef.value.play().then(_ => {}).catch(() => {})
           }
+          if (shouldRenderCanvas.value) {
+            shouldRenderCanvas.value = false
+            setTimeout(() => {
+              renderCanvas(canvasRef, videoRef)
+            }, 500)
+          }
         }
       }
     };
@@ -103,7 +111,9 @@ const createNewSession = async (videoRef: Ref<HTMLVideoElement | undefined>) => 
       const dataChannel = event.channel;
       dataChannel.onmessage = (event) => {
         console.log('Recieved message:', event.data);
-        isGenerating.value = false
+        setTimeout(() => {
+          isGenerating.value = false
+        }, 400)
       };
     };
     // Set server's SDP as remote description
@@ -229,6 +239,7 @@ async function closeConnectionHandler() {
     // already closed
     return;
   }
+  renderID.value++
   mediaCanPlay.value = false;
   
   console.log('closing connection...');
@@ -309,4 +320,59 @@ async function repeat(session_id: string, text: string) {
     const data = await response.json();
     return data.data;
   }
+}
+
+let renderID = ref(0)
+const renderCanvas = (canvasRef: Ref<HTMLCanvasElement | undefined>, videoRef: Ref<HTMLVideoElement | undefined>) => {
+  // init renderID
+  const curRenderID = Math.trunc(Math.random() * 1000000000)
+  renderID.value = curRenderID
+  // get canvas context
+  const ctx = canvasRef.value.getContext('2d', { willReadFrequently: true });
+
+
+  function process_frame () {
+    if (curRenderID !== renderID.value) {
+      return
+    }
+    // If streaming is not
+    if (!videoRef.value.videoHeight || !videoRef.value.videoWidth) {
+      setTimeout(() => {
+        process_frame()
+      }, 200)
+      return
+    }
+
+    // set dimestions
+    canvasRef.value.width = videoRef.value.videoWidth;
+    canvasRef.value.height = videoRef.value.videoHeight;
+    
+    // drawing frame
+    ctx.drawImage(videoRef.value, 0, 0, canvasRef.value.width, canvasRef.value.height)
+    ctx.getContextAttributes().willReadFrequently = true;
+    
+    const imageData = ctx.getImageData(0, 0, canvasRef.value.width, canvasRef.value.height);
+    const data = imageData.data;
+
+    for (let i = 0; i < data.length; i += 4) {
+      const red = data[i];
+      const green = data[i + 1];
+      const blue = data[i + 2];
+
+      // You can implement your own logic here
+      if (isCloseToGreen([red, green, blue])) {
+        // if (isCloseToGray([red, green, blue])) {
+        data[i + 3] = 0;
+      }
+    }
+
+    ctx.putImageData(imageData, 0, 0);
+    requestAnimationFrame(process_frame);
+  }
+
+  process_frame();
+}
+function isCloseToGreen(color) {
+  const [red, green, blue] = color;
+  return green > 90 && red < 90 && blue < 90;
 }
