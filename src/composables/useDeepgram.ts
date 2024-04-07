@@ -74,10 +74,12 @@ const keepAlive = () => {
   let interval;
   if (connection.value && connectionIsReady) {
     interval = setInterval(() => {
-      if (connection.value.getReadyState() !== LiveConnectionState.OPEN) {
+      if (connection.value && connection.value.getReadyState() !== LiveConnectionState.OPEN) {
         clearInterval(interval)
       } else {
-        connection.value.keepAlive()
+        if (connection.value) {
+          connection.value.keepAlive()
+        }
       }
     }, 10000)
   } else {
@@ -88,9 +90,7 @@ const keepAlive = () => {
 }
 
 const setupListeners = () => {
-  console.log('run listeners outer')
   if (connection.value && connection.value.getReadyState() !== undefined) {
-    console.log('run listeners inner')
 
     connection.value.addListener(LiveTranscriptionEvents.Open, () => {
       connectionIsReady.value = true
@@ -111,7 +111,7 @@ const setupListeners = () => {
       console.log(data, 'Metadata')
     })
     connection.value.addListener(LiveTranscriptionEvents.Transcript, (data: LiveTranscriptionEvent) => {
-      console.log(data, 'Transcript')
+      // console.log(data, 'Transcript')
       if (data.channel.alternatives[0].transcript) {
         transcript.value = {
           isFinal: data.is_final,
@@ -131,10 +131,8 @@ const clear = () => {
 }
 
 export default function useDeepgram(lang: 'ru' | 'en') {
-  console.log('run hook')
   const start = async () => {
     await connect()
-    console.log('run start')
     setupListeners()
   }
   start()

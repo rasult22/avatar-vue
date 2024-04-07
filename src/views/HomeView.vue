@@ -50,17 +50,40 @@ const {
 } = useAvatar(videoRef, canvasRef);
 let text = ref("Салам Азамат, как дела?");
 
+watch(currentMessage, (v) => {
+  if (v) avatarText.value = v
+})
+
 watch([currentMessage, gtpIsStreaming], ([value]) => {
+  
   if (value && !gtpIsStreaming.value) {
-    generateVoice(value);
+    console.log(value)
+    if (value.length > 200) {
+      console.log (`${value} is longer than 100`)
+      console.log ('split it to 2')
+      const fn = async () => {  
+        const arr = value.split(' ')
+        const halfIndex = Math.ceil(arr.length / 2);
+        let firstHalf = arr.slice(0, halfIndex).join(' ');
+        console.log('sending first:' + firstHalf)
+        await generateVoice(firstHalf)
+        let secondHalf = arr.slice(halfIndex).join(' ');
+        setTimeout(() => {
+          console.log('sending second:' + secondHalf)
+          generateVoice(secondHalf)
+        }, 2000)
+      }
+      
+      fn()
+    } else {
+      console.log('sending:', value)
+      generateVoice(value);
+    }
     avatarText.value = value;
     currentMessage.value = "";
   }
 });
 
-watch(currentWord, (val) => {
-  avatarText.value += val;
-});
 
 const processQueue = () => {
   if (queueSize.value > 0 && !isProcessing.value) {
@@ -84,11 +107,10 @@ watch(queueSize, () => {
 });
 
 watch(transcript, (val) => {
+  // call openAI
   userText.value = val.text;
-  if (val.isFinal) {
-    text.value = val.text;
-    // call openAI
-    sendMessage(text.value);
+  if (val.isFinal && !gtpIsStreaming.value) {
+    sendMessage(val.text);
   }
 });
 
@@ -121,14 +143,14 @@ const onStopRecording = () => {
       <div
         class="absolute inset-x-0 m-auto h-80 max-w-lg bg-gradient-to-tr from-indigo-400 via-teal-900 to-[#C084FC] blur-[118px]"
       ></div>
-      <div class="flex">
-        <div v-if="avatarText" class="text-white w-[300px] z-[2]">
+      <div class="flex items-start">
+        <div v-if="avatarText" class="text-white w-[250px] z-[2] text-left">
           <span class="font-bold text-purple-300">avatar:</span>
           {{ avatarText }}
         </div>
         <video
           ref="videoRef"
-          class="my-4 hidden z-10 w-full rounded-full max-h-[400px] min-h-[300px] border max-w-[300px]"
+          class="my-4 hidden z-10 rounded-full max-h-[400px] min-h-[300px] border w-[300px]"
           autoPlay
           playsInline
         ></video>
@@ -136,7 +158,7 @@ const onStopRecording = () => {
           ref="canvasRef"
           width="300"
           height="300"
-          class="z-10 my-4 w-full rounded-full max-h-[400px] min-h-[300px] flex border max-w-[300px]"
+          class="z-10 my-4 rounded-full max-h-[400px] min-h-[300px] flex border w-[300px]"
         ></canvas>
         <div v-if="userText" class="text-white w-[300px] z-[2]">
           <span class="font-bold text-red-300">user:</span> {{ userText }}
@@ -155,22 +177,39 @@ const onStopRecording = () => {
         <div class="h-2 w-2 bg-white rounded-full animate-bounce"></div>
       </div>
     </div>
-    <UIButton
-      class="z-[2]"
-      @touchstart="startMicrophone"
-      @touchend="onStopRecording"
-      @mousedown="startMicrophone"
-      @mouseup="onStopRecording"
-    >
-      <div class="flex items-center space-x-2">
-        <span>Start Recording</span>
-        <UISpinner v-if="isRecording" />
-      </div>
-    </UIButton>
+    <div class="flex space-x-2">
+      <UIButton
+        class="z-[2]"
+        @click="startMicrophone"
+      >
+        <div class="flex items-center space-x-2">
+          <span>Start Recording</span>
+        </div>
+      </UIButton>
+      <UIButton
+        class="z-[2]"
+        @click="stopMicrophone"
+      >
+        <div class="flex items-center space-x-2">
+          <span>Stop Recording</span>
+        </div>
+      </UIButton>
+      <UIButton
+        class="z-[2]"
+        @touchstart="startMicrophone"
+        @touchend="onStopRecording"
+        @mousedown="startMicrophone"
+        @mouseup="onStopRecording"
+      >
+        <div class="flex items-center space-x-2">
+          <span>Hold to Record</span>
+          <UISpinner v-if="isRecording" />
+        </div>
+      </UIButton>
+    </div>
     <div class="flex flex-wrap justify-center">
       <div class="bg-slate-200 font-mono p-4 w-[400px] min-h-[200px] mt-4">
         <h1 class="font-bold text-[20px]">OpenAI</h1>
-        <p>textQueue: {{ textArr }}</p>
         <p>currentWord: {{ currentWord }}</p>
         <p>currentMessage: {{ currentMessage }}</p>
         <p>messages: {{ messages }}</p>

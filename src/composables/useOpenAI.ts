@@ -6,7 +6,10 @@ type Message = {
   role: "user" | "assistant" | "system";
   content: string;
 };
-const messages = ref<Message[]>([]);
+const messages = ref<Message[]>([{
+  role: 'system',
+  content: 'Do not write long text. Your limit is 500 symbols. Try to reply only in this limits.'
+}]);
 
 const gtpIsStreaming = ref(false)
 const currentMessage = ref("")
@@ -34,7 +37,7 @@ const sendCompetions = async () => {
       model: "gpt-3.5-turbo",
       temperature: 0.7,
       stream: true,
-      max_tokens: 150,
+      max_tokens: 1000,
       messages: messages.value,
     }),
   });
@@ -63,10 +66,10 @@ const sendMessage = async (text: string) => {
     .filter((line) => line.length > 0)
     .filter((line) => line !== "[DONE]")
     .map((line) => {
-      console.log(line)
       try {
         return JSON.parse(line)
       } catch {
+        console.log(line)
         return ""
       }
     });
@@ -78,7 +81,7 @@ const sendMessage = async (text: string) => {
         const { content } = delta;
         
         if (content) {
-          currentWord.value = content
+          // currentWord.value = content
           currentMessage.value += content
   
           textArray.value.push(content)

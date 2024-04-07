@@ -14,6 +14,10 @@ type SessionInfo = {
   session_id: string;
 };
 
+// handle audio
+
+const mediaStreamSource = ref<MediaStreamAudioSourceNode | undefined>()
+
 const shouldRenderCanvas =ref(true)
 const isError = ref(false);
 const state = ref<'started' | 'stopped'>('stopped')
@@ -30,6 +34,7 @@ const iceConnectionState = ref<RTCIceConnectionState>();
 export const useAvatar = (incomingVideoRef: Ref<HTMLVideoElement | undefined>, incomingCanvasRef: Ref<HTMLCanvasElement | undefined>) => {
   const start =  async() => {
     isLoading.value = true;
+    shouldRenderCanvas.value = true
     await checkSessionsAndCloseIfExists()
     // create new session
     await new Promise((res, rej) => {
@@ -63,10 +68,10 @@ export const useAvatar = (incomingVideoRef: Ref<HTMLVideoElement | undefined>, i
     closeConnection: closeConnectionHandler,
     iceConnectionState,
     start,
-    generateVoice: (text: string) => {
+    generateVoice: async (text: string) => {
       if (sessionInfo.value) {
         isGenerating.value = true
-        repeat(sessionInfo.value?.session_id, text)
+        await repeat(sessionInfo.value?.session_id, text)
       }
     }
   };
@@ -91,7 +96,27 @@ const createNewSession = async (videoRef: Ref<HTMLVideoElement | undefined>, can
       if (event.track.kind === 'audio' || event.track.kind === 'video') {
         remoteStream.value = event.streams[0];
         triggerRemoteStream.value++
+
+        if (event.track.kind === 'audio') {
+          const audioContext = new AudioContext()
+          const audioAnalyzer = audioContext.createAnalyser()
+          const source = audioContext.createMediaStreamSource(event.streams[0])
+          source.connect(audioContext.destination)
+          const analyzer = audioContext.createAnalyser()
+          analyzer.connect(audioContext.destination)
+          analyzer.fftSize = 64;
+          setInterval(() => {
+            let frequencyData = new Uint8Array(analyzer.frequencyBinCount);
+            analyzer.getByteFrequencyData(frequencyData);
+            if (frequencyData.join('') !== "00000000000000000000000000000000") {
+              alert('there is some data')
+              console.log(frequencyData)
+            }
+            
+          }, 1000)
+        }
         if (videoRef.value) {
+
           videoRef.value.srcObject = event.streams[0];
 
           if (videoRef.value.paused)  {
@@ -110,7 +135,7 @@ const createNewSession = async (videoRef: Ref<HTMLVideoElement | undefined>, can
     peerConnection.value.ondatachannel = (event) => {
       const dataChannel = event.channel;
       dataChannel.onmessage = (event) => {
-        console.log('Recieved message:', event.data);
+        // console.log('Recieved message:', event.data);
         setTimeout(() => {
           isGenerating.value = false
         }, 400)
@@ -165,6 +190,7 @@ async function newSession(
       avatar_name,
       voice: {
         voice_id: voice_id,
+        rate: 1.25
       },
     }),
   });
