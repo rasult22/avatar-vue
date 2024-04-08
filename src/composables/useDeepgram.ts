@@ -33,7 +33,7 @@ const getApiKey = async (): Promise<string> => {
   // const result: CreateProjectKeyResponse = await (
   //   await fetch("/api/authenticate", { cache: "no-store" })
   // ).json();
-  return "";
+  return process.env.VUE_APP_DEEPGRAM_API
 
 };
 
