@@ -45,19 +45,17 @@ let transcript = ref({
   text: ""
 })
 
-const connect = async () => {
-  console.log('connect outer')
+const connect = async (lang: 'ru' | 'en') => {
   if (!connection.value && !isConnecting.value) {
     isConnecting.value = true;
     
-    console.log('connect inner')
     connection.value = new LiveClient(
       await getApiKey(),
       {
         
       },
       {
-        language: 'ru',
+        language: lang,
         model: "nova-2",
         interim_results: true,
         smart_format: true,
@@ -132,7 +130,7 @@ const clear = () => {
 
 export default function useDeepgram(lang: 'ru' | 'en') {
   const start = async () => {
-    await connect()
+    await connect(lang)
     setupListeners()
   }
   start()

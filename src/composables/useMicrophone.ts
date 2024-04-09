@@ -34,7 +34,7 @@ export default function useMicrophone() {
     }
   });
 
-  // setupMicrophone();
+  setupMicrophone();
 
   return {
     microphone,
@@ -78,7 +78,7 @@ const startMicrophone = () => {
   if (!microphone.value) return
   if (microphone.value.state === "paused") {
     microphone.value.resume();
-  } else {
+  } else if (microphone.value.state !== 'recording') {
     microphone.value.start(250);
   }
   microphoneIsOpen.value = true

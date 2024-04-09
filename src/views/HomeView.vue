@@ -2,15 +2,17 @@
 import { ref, watch } from "vue";
 import UIButton from "@/ui/ui-button.vue";
 import UIInput from "@/ui/ui-input.vue";
+import IconMic from '@/components/icon-mic'
+import IconRecording from '@/components/icon-recording'
 import UISpinner from "@/ui/ui-spinner.vue";
 import { useAvatar } from "@/composables/useAvatar";
 import useMicroPhone from "@/composables/useMicrophone";
 import useDeepgram from "@/composables/useDeepgram";
 import useOpenAI from "@/composables/useOpenAI";
-
+const ll = ''
 let isProcessing = ref(false);
-let userText = ref("...");
-let avatarText = ref("...");
+let userText = ref(ll);
+let avatarText = ref(ll);
 
 const {
   sendMessage,
@@ -18,10 +20,9 @@ const {
   currentMessage,
   gtpIsStreaming,
   currentWord,
-  textArr,
 } = useOpenAI();
 const { connection, isConnecting, transcript, connectionIsReady } =
-  useDeepgram("ru");
+  useDeepgram("en");
 const {
   isRecording,
   microphoneIsOpen,
@@ -36,7 +37,6 @@ const {
 const videoRef = ref<HTMLVideoElement>();
 const canvasRef = ref<HTMLCanvasElement>();
 const {
-  renderCanvas,
   isLoading,
   isGenerating,
   iceConnectionState,
@@ -44,7 +44,6 @@ const {
   state,
   isError,
   errorMessage,
-  mediaCanPlay,
   generateVoice,
   start,
 } = useAvatar(videoRef, canvasRef);
@@ -129,8 +128,8 @@ const onStopRecording = () => {
 };
 </script>
 <template>
-  <div class="home flex flex-col justify-center items-center bg-blue-900 py-4 px-4">
-    <div class="flex z-[2] flex-col items-center space-y-2">
+  <div class="home h-[100vh] flex flex-col pt-[20vh] items-center bg-blue-900 py-4 px-4">
+    <div class="absolute top-4 flex z-[2] flex-col items-center space-y-2">
       <UIButton v-if="state === 'stopped'" :disabled="isLoading" @click="start">
         <div class="flex items-center space-x-2">
           <span>Start Connection</span>
@@ -139,15 +138,14 @@ const onStopRecording = () => {
       </UIButton>
       <UIButton v-else @click="closeConnection">Stop Connection</UIButton>
     </div>
-    <div class="flex relative flex-col w-full items-center">
+    <div :class="{'opacity-0': state === 'stopped'}" class="flex relative flex-col w-full items-center">
       <div
         class="absolute inset-x-0 m-auto h-80 max-w-lg bg-gradient-to-tr from-indigo-400 via-teal-900 to-[#C084FC] blur-[118px]"
       ></div>
       <div class="flex items-start sm:flex-wrap sm:justify-center">
-        
         <video
           ref="videoRef"
-          class="my-4 hidden z-10 rounded-full max-h-[400px] min-h-[300px] border w-[300px]"
+          class="my-4 hidden z-10 rounded-full max-h-[400px] min-h-[300px] w-[300px]"
           autoPlay
           playsInline
         ></video>
@@ -155,15 +153,8 @@ const onStopRecording = () => {
           ref="canvasRef"
           width="300"
           height="300"
-          class="z-10 my-4 rounded-full max-h-[400px] h-[300px] flex border w-[300px]"
+          class="z-10 my-4 rounded-full max-h-[400px] h-[300px] flex w-[300px]"
         ></canvas>
-        <div v-if="avatarText" class="text-white w-[250px] sm:w-full z-[2] text-left">
-          <span class="font-bold text-purple-300">avatar:</span>
-          {{ avatarText }}
-        </div>
-        <div v-if="userText" class="text-white w-[300px] sm:w-full z-[2]">
-          <span class="font-bold text-red-300">user:</span> {{ userText }}
-        </div>
       </div>
       <div
         v-if="gtpIsStreaming || isGenerating"
@@ -178,22 +169,31 @@ const onStopRecording = () => {
         <div class="h-2 w-2 bg-white rounded-full animate-bounce"></div>
       </div>
     </div>
-    <div class="flex space-x-2 sm:flex-wrap sm:justify-center">
+    <div v-if="iceConnectionState === 'connected'" :class="{'opacity-0': state === 'stopped'}" class="flex space-x-2 sm:flex-wrap sm:justify-center">
       <UIButton
-        class="z-[2]"
+        class="z-[2] active:scale-105"
         @touchstart="startMicrophone"
         @touchend="onStopRecording"
         @mousedown="startMicrophone"
         @mouseup="onStopRecording"
       >
         <div class="flex items-center space-x-2">
-          <span v-if="!isRecording">Hold to Record</span>
-          <span v-else>Recording...</span>
-          <UISpinner v-if="isRecording" />
+          <IconRecording v-if="isRecording"/>
+          <IconMic v-else/>
+          <UISpinner  v-if="isRecording"/>
         </div>
       </UIButton>
     </div>
-    <div class="flex flex-wrap justify-center">
+    <div :class="{'opacity-0': state === 'stopped'}">
+      <div v-if="userText" v-motion :initial="{opacity: 0}" :enter="{opacity: 1}" :delay="20" class="text-white mt-2 sm:text-[14px] w-[50%] sm:w-full z-[2]">
+        <span class="font-bold text-red-300">user:</span> {{ userText }}
+      </div>
+      <div v-if="avatarText" v-motion :initial="{opacity: 0}" :enter="{opacity: 1}" :delay="20" class="text-white sm:text-[14px] w-[50%] sm:w-full z-[2] text-left">
+        <span class="font-bold text-purple-300">avatar:</span>
+        {{ avatarText }}
+      </div>
+    </div>
+    <div v-if="false" class="flex flex-wrap justify-center">
       <div class="bg-slate-200 font-mono p-4 w-[400px] min-h-[200px] mt-4">
         <h1 class="font-bold text-[20px]">OpenAI</h1>
         <p>currentWord: {{ currentWord }}</p>
@@ -221,7 +221,7 @@ const onStopRecording = () => {
         <h1 class="font-bold text-[20px]">Deepgram API</h1>
         <p>transcript: {{ transcript }}</p>
         <p>isProcessing: {{ isProcessing }}</p>
-        <p>connection: {{ connection !== undefined }}</p>
+        <p>connection:. {{ connection !== undefined }}</p>
         <p>isConnecting: {{ isConnecting }}</p>
         <p>connectionIsReady: {{ connectionIsReady }}</p>
       </div>

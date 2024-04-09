@@ -1,4 +1,5 @@
 import { nextTick, ref, Ref } from 'vue';
+import useSystem from './useSystem';
 
 const SERVER_URL = process.env.VUE_APP_HEYGET_SERVER_URL;
 const apiKey = process.env.VUE_APP_HEYGEN_API_KEY;
@@ -14,10 +15,8 @@ type SessionInfo = {
   session_id: string;
 };
 
-// handle audio
 
-const mediaStreamSource = ref<MediaStreamAudioSourceNode | undefined>()
-
+const {errorToast} = useSystem()
 const shouldRenderCanvas =ref(true)
 const isError = ref(false);
 const state = ref<'started' | 'stopped'>('stopped')
@@ -27,30 +26,28 @@ const isLoading = ref(false);
 const isGenerating = ref(false);
 const sessionInfo = ref<SessionInfo>();
 const peerConnection = ref<RTCPeerConnection>();
-const remoteStream = ref<MediaStream>();
-const triggerRemoteStream = ref(0)
 const iceConnectionState = ref<RTCIceConnectionState>();
 
 export const useAvatar = (incomingVideoRef: Ref<HTMLVideoElement | undefined>, incomingCanvasRef: Ref<HTMLCanvasElement | undefined>) => {
   const start =  async() => {
     isLoading.value = true;
     shouldRenderCanvas.value = true
-    await checkSessionsAndCloseIfExists()
-    // create new session
-    await new Promise((res, rej) => {
-      setTimeout(async () => {
-        await createNewSession(incomingVideoRef, incomingCanvasRef)
-        res(1)
-      },300)
-    })
-    await new Promise((res, rej) => {
-      setTimeout(async () => {
-        await startAndDisplaySession()
-        res(1)
-      }, 300)
-    })
-    isLoading.value = false
-    state.value = 'started'
+      await checkSessionsAndCloseIfExists()
+      // create new session
+      await new Promise((res, rej) => {
+        setTimeout(async () => {
+          await createNewSession(incomingVideoRef, incomingCanvasRef)
+          res(1)
+        },300)
+      })
+      await new Promise((res, rej) => {
+        setTimeout(async () => {
+          await startAndDisplaySession()
+          res(1)
+        }, 300)
+      })
+      isLoading.value = false
+      state.value = 'started'
   }
 
   return {
@@ -62,9 +59,7 @@ export const useAvatar = (incomingVideoRef: Ref<HTMLVideoElement | undefined>, i
     isLoading,
     sessionInfo,
     peerConnection,
-    remoteStream,
     renderCanvas,
-    triggerRemoteStream,
     closeConnection: closeConnectionHandler,
     iceConnectionState,
     start,
@@ -94,29 +89,7 @@ const createNewSession = async (videoRef: Ref<HTMLVideoElement | undefined>, can
     peerConnection.value.ontrack = (event) => {
       console.log('Received the track');
       if (event.track.kind === 'audio' || event.track.kind === 'video') {
-        remoteStream.value = event.streams[0];
-        triggerRemoteStream.value++
-
-        if (event.track.kind === 'audio') {
-          const audioContext = new AudioContext()
-          const audioAnalyzer = audioContext.createAnalyser()
-          const source = audioContext.createMediaStreamSource(event.streams[0])
-          source.connect(audioContext.destination)
-          const analyzer = audioContext.createAnalyser()
-          analyzer.connect(audioContext.destination)
-          analyzer.fftSize = 64;
-          setInterval(() => {
-            let frequencyData = new Uint8Array(analyzer.frequencyBinCount);
-            analyzer.getByteFrequencyData(frequencyData);
-            if (frequencyData.join('') !== "00000000000000000000000000000000") {
-              alert('there is some data')
-              console.log(frequencyData)
-            }
-            
-          }, 1000)
-        }
         if (videoRef.value) {
-
           videoRef.value.srcObject = event.streams[0];
 
           if (videoRef.value.paused)  {
@@ -179,35 +152,33 @@ async function newSession(
   avatar_name: string,
   voice_id: string,
 ) {
-  const response = await fetch(`${SERVER_URL}/v1/streaming.new`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Api-Key': apiKey,
-    },
-    body: JSON.stringify({
-      quality,
-      avatar_name,
-      voice: {
-        voice_id: voice_id,
-        rate: 1.25
+  try {
+    const response = await fetch(`${SERVER_URL}/v1/streaming.new`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Api-Key': apiKey,
       },
-    }),
-  });
-  if (response.status === 500) {
-    console.error('Server error');
-    isError.value = true;
-    errorMessage.value = 'Server Error. Please ask the staff if the service has been turned on';
-    // updateStatus(
-    //   statusElement,
-    //   'Server Error. Please ask the staff if the service has been turned on',
-    // );
-
-    throw new Error('Server error');
-  } else {
+      body: JSON.stringify({
+        quality,
+        avatar_name,
+        voice: {
+          voice_id: voice_id,
+        },
+      }),
+    });
+    if (response.status > 399) {
+      throw new Error('Error: Creating new session failed!')
+    }
     const data = await response.json();
     console.log(data.data);
     return data.data;
+  } catch(err) {
+    console.log(err, 'err')
+    state.value = 'stopped'
+    isLoading.value = false
+    errorToast.value.showToast(err.message)
+    throw new Error('Hello')
   }
 }
 // submit the ICE candidate
@@ -307,23 +278,25 @@ async function getSessionsList () {
 
 // stop session
 async function stopSession(session_id: string) {
-  const response = await fetch(`${SERVER_URL}/v1/streaming.stop`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Api-Key': apiKey,
-    },
-    body: JSON.stringify({ session_id }),
-  });
-  if (response.status === 500) {
-    console.error('Server error');
-    isError.value = true;
-    errorMessage.value = 'Server Error. Please ask the staff for help';
-    // updateStatus(statusElement, 'Server Error. Please ask the staff for help');
-    throw new Error('Server error');
-  } else {
+  try {
+    const response = await fetch(`${SERVER_URL}/v1/streaming.stop`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Api-Key': apiKey,
+      },
+      body: JSON.stringify({ session_id }),
+    });
+    if (response.status > 399) {
+      throw new Error(`Error: Stopping current session failed`)
+    }
     const data = await response.json();
     return data.data;
+  } catch (err) {
+    console.log(err, 'err')
+    state.value = 'stopped'
+    isLoading.value = false
+    errorToast.value.showToast(err.message)
   }
 }
 async function repeat(session_id: string, text: string) {

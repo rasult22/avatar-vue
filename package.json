@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@deepgram/sdk": "^3.2.0",
+    "@vueuse/motion": "^2.1.0",
     "core-js": "^3.8.3",
     "flowbite": "^2.3.0",
     "vue": "^3.2.13",
