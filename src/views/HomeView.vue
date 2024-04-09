@@ -12,11 +12,6 @@ let isProcessing = ref(false);
 let userText = ref("...");
 let avatarText = ref("...");
 
-const chatMessages = ref<{
-  text: string,
-  role: 'user' | 'assistant'
-}[]>([])
-
 const {
   sendMessage,
   messages,
@@ -63,10 +58,6 @@ watch([currentMessage, gtpIsStreaming], ([value]) => {
   
   if (value && !gtpIsStreaming.value) {
     console.log(value)
-    chatMessages.value.push({
-      role: 'assistant',
-      text: value
-    })
     if (value.length > 200) {
       console.log (`${value} is longer than 100`)
       console.log ('split it to 2')
@@ -119,10 +110,6 @@ watch(transcript, (val) => {
   // call openAI
   userText.value = val.text;
   if (val.isFinal && !gtpIsStreaming.value) {
-    chatMessages.value.push({
-      role: 'user',
-      text: val.text
-    })
     sendMessage(val.text);
   }
 });
@@ -157,10 +144,7 @@ const onStopRecording = () => {
         class="absolute inset-x-0 m-auto h-80 max-w-lg bg-gradient-to-tr from-indigo-400 via-teal-900 to-[#C084FC] blur-[118px]"
       ></div>
       <div class="flex items-start sm:flex-wrap sm:justify-center">
-        <div v-if="avatarText" class="text-white w-[250px] sm:w-full z-[2] text-left">
-          <span class="font-bold text-purple-300">avatar:</span>
-          {{ avatarText }}
-        </div>
+        
         <video
           ref="videoRef"
           class="my-4 hidden z-10 rounded-full max-h-[400px] min-h-[300px] border w-[300px]"
@@ -173,6 +157,10 @@ const onStopRecording = () => {
           height="300"
           class="z-10 my-4 rounded-full max-h-[400px] h-[300px] flex border w-[300px]"
         ></canvas>
+        <div v-if="avatarText" class="text-white w-[250px] sm:w-full z-[2] text-left">
+          <span class="font-bold text-purple-300">avatar:</span>
+          {{ avatarText }}
+        </div>
         <div v-if="userText" class="text-white w-[300px] sm:w-full z-[2]">
           <span class="font-bold text-red-300">user:</span> {{ userText }}
         </div>
@@ -193,23 +181,6 @@ const onStopRecording = () => {
     <div class="flex space-x-2 sm:flex-wrap sm:justify-center">
       <UIButton
         class="z-[2]"
-        @click="startMicrophone"
-      >
-        <div class="flex items-center space-x-2">
-          <span>Start Recording</span>
-        </div>
-      </UIButton>
-      <UIButton
-        class="z-[2]"
-        @click="stopMicrophone"
-      >
-        <div class="flex items-center space-x-2">
-          <span>Stop Recording</span>
-        </div>
-      </UIButton>
-      <div class="text-white flex sm:w-full text-center sm:justify-center items-center">or</div>
-      <UIButton
-        class="z-[2]"
         @touchstart="startMicrophone"
         @touchend="onStopRecording"
         @mousedown="startMicrophone"
@@ -221,17 +192,6 @@ const onStopRecording = () => {
           <UISpinner v-if="isRecording" />
         </div>
       </UIButton>
-    </div>
-    <div class="bg-white w-full my-4 py-2 min-h-[300px] max-h-[300px] overflow-auto rounded-md flex flex-col items-center">
-      <div class="font-bold text-[18px]">Chat:</div>
-      <div class="max-w-[300px] flex" v-for="(msg, index) in chatMessages" :key="index">
-        <div class="border-t">
-          <span class="font-bold" :class="{'text-red-400': msg.role === 'user', 'text-purple-800': msg.role === 'assistant'}">
-            {{ msg.role }}:
-          </span>
-          {{ msg.text }}
-        </div>
-      </div>
     </div>
     <div class="flex flex-wrap justify-center">
       <div class="bg-slate-200 font-mono p-4 w-[400px] min-h-[200px] mt-4">

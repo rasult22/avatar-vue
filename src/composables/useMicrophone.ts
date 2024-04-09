@@ -34,7 +34,7 @@ export default function useMicrophone() {
     }
   });
 
-  setupMicrophone();
+  // setupMicrophone();
 
   return {
     microphone,
@@ -62,6 +62,8 @@ const setupMicrophone = async () => {
 };
 
 const stopMicrophone = () => {
+  if (!microphone.value) return
+
   if (microphone.value.state === "recording") {
     isRecording.value = false
     const waiting = setTimeout(() => {
@@ -73,6 +75,7 @@ const stopMicrophone = () => {
 };
 
 const startMicrophone = () => {
+  if (!microphone.value) return
   if (microphone.value.state === "paused") {
     microphone.value.resume();
   } else {
