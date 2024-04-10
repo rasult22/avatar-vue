@@ -2,7 +2,7 @@ import { nextTick, ref, Ref } from 'vue';
 import useSystem from './useSystem';
 
 const SERVER_URL = process.env.VUE_APP_HEYGET_SERVER_URL;
-const apiKey = process.env.VUE_APP_HEYGEN_API_KEY;
+let apiKey = process.env.VUE_APP_HEYGEN_API_KEY;
 
 type ICEServer = {
   urls: string[];
@@ -16,7 +16,7 @@ type SessionInfo = {
 };
 
 
-const {errorToast} = useSystem()
+const {errorToast, hideLoading} = useSystem()
 const shouldRenderCanvas =ref(true)
 const isError = ref(false);
 const state = ref<'started' | 'stopped'>('stopped')
@@ -28,7 +28,12 @@ const sessionInfo = ref<SessionInfo>();
 const peerConnection = ref<RTCPeerConnection>();
 const iceConnectionState = ref<RTCIceConnectionState>();
 
-export const useAvatar = (incomingVideoRef: Ref<HTMLVideoElement | undefined>, incomingCanvasRef: Ref<HTMLCanvasElement | undefined>) => {
+export const useAvatar = (incomingVideoRef: Ref<HTMLVideoElement | undefined>, incomingCanvasRef: Ref<HTMLCanvasElement | undefined>, lang: 'ru' | 'en') => {
+  if (lang === 'ru') {
+    apiKey = process.env.VUE_APP_HEYGEN_API_KEY_RU
+  } else {
+    apiKey = process.env.VUE_APP_HEYGEN_API_KEY
+  }
   const start =  async() => {
     isLoading.value = true;
     shouldRenderCanvas.value = true

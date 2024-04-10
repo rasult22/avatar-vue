@@ -8,7 +8,7 @@ const errorToast = ref({
     errorToast.value.toastIsShown = true;
     setTimeout(() => {
       errorToast.value.toastIsShown = false
-    }, 3500)
+    }, 15500)
   },
   message: 'Something went wrong'
 })

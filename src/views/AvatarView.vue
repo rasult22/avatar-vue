@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { onBeforeUnmount, onMounted, ref, watch } from "vue";
 import UIButton from "@/ui/ui-button.vue";
 import UIInput from "@/ui/ui-input.vue";
 import IconEn from '@/components/icon-en.vue'
@@ -13,12 +13,14 @@ import useMicroPhone from "@/composables/useMicrophone";
 import useDeepgram from "@/composables/useDeepgram";
 import useOpenAI from "@/composables/useOpenAI";
 import { useRouter } from "vue-router";
+import useSystem from "@/composables/useSystem";
 const router = useRouter()
 const ll = ''
 let isProcessing = ref(false);
 let userText = ref(ll);
 let avatarText = ref(ll);
 let lang = localStorage.getItem('lang') as 'en' | 'ru' | undefined
+const {showLoading, hideLoading} = useSystem()
 const {
   sendMessage,
   messages,
@@ -51,11 +53,19 @@ const {
   errorMessage,
   generateVoice,
   start,
-} = useAvatar(videoRef, canvasRef);
+} = useAvatar(videoRef, canvasRef, lang);
 let text = ref("Салам Азамат, как дела?");
 
 watch(currentMessage, (v) => {
   if (v) avatarText.value = v
+})
+onMounted(async () => {
+  showLoading()
+  await start()
+  hideLoading()
+})
+onBeforeUnmount(() => {
+  closeConnection()
 })
 
 watch([currentMessage, gtpIsStreaming], ([value]) => {
@@ -69,7 +79,7 @@ watch([currentMessage, gtpIsStreaming], ([value]) => {
         const arr = value.split(' ')
         const halfIndex = Math.ceil(arr.length / 2);
         let firstHalf = arr.slice(0, halfIndex).join(' ');
-        console.log('sending first:' + firstHalf)
+        console.log('sending first: ' + firstHalf)
         await generateVoice(firstHalf)
         let secondHalf = arr.slice(halfIndex).join(' ');
         setTimeout(() => {
@@ -144,20 +154,12 @@ const onBack = async () => {
         class="absolute inset-x-0 m-auto h-80 max-w-lg bg-gradient-to-tr from-indigo-400 via-teal-900 to-[#C084FC] blur-[118px]"
       ></div>
     <div class="absolute top-4 flex w-full z-[2] flex-col items-center space-y-2">
-      <IconBack @click="onBack" class="absolute text-white top-3 left-4"/>
-      <UIButton v-if="state === 'stopped'" :disabled="isLoading" @click="start">
-        <div class="flex items-center space-x-2">
-          <span>Start Connection</span>
-          <UISpinner v-if="isLoading" />
-        </div>
-      </UIButton>
-      <UIButton v-else @click="closeConnection">Stop Connection</UIButton>
-      <div class="absolute right-4 top-2">
+      <div @click="router.push('/')" class="absolute right-4 top-2">
         <IconRu v-if="lang === 'ru'"></IconRu>
         <IconEn v-else></IconEn>
       </div>
     </div>
-    <div :class="{'opacity-0': state === 'stopped'}" class="flex relative flex-col w-full items-center">
+    <div :class="{'opacity-0': state === 'stopped'}" class="flex  relative flex-col w-full items-center">
       
       <div class="flex items-start sm:flex-wrap sm:justify-center">
         <video
