@@ -1,8 +1,12 @@
 <script setup lang="ts">
 import useSystem from '@/composables/useSystem'
+import { useRouter } from 'vue-router';
 const {errorToast} = useSystem()
-const onRetry = () => {
-  window.location.reload()
+const r  =useRouter()
+const onRetry = async () => {
+  await r.push('/')
+  await r.push('/avatar')
+  errorToast.value.toastIsShown = false
 }
 </script>
 <template>
