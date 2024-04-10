@@ -1,11 +1,9 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, watch } from "vue";
 import UIButton from "@/ui/ui-button.vue";
-import UIInput from "@/ui/ui-input.vue";
 import IconEn from '@/components/icon-en.vue'
 import IconRu from '@/components/icon-ru.vue'
 import IconMic from '@/components/icon-mic.vue'
-import IconBack from '@/components/icon-back.vue'
 import IconRecording from '@/components/icon-recording.vue'
 import UISpinner from "@/ui/ui-spinner.vue";
 import { useAvatar } from "@/composables/useAvatar";
@@ -18,6 +16,7 @@ const router = useRouter()
 const ll = ''
 let isProcessing = ref(false);
 let userText = ref(ll);
+let prevText = ref(ll);
 let avatarText = ref(ll);
 let lang = localStorage.getItem('lang') as 'en' | 'ru' | undefined
 const {showLoading, hideLoading} = useSystem()
@@ -124,29 +123,30 @@ watch(transcript, (val) => {
   // call openAI
   userText.value = val.text;
   if (val.isFinal && !gtpIsStreaming.value) {
+    prevText.value = val.text;
     sendMessage(val.text);
   }
 });
 
+
 const onStopRecording = () => {
-  stopMicrophone();
+  console.log('run')
   setTimeout(() => {
-    if (
-      !isRecording &&
-      !transcript.value.isFinal &&
-      transcript.value.text !== text.value
-    ) {
-      console.log("this case");
-      text.value = transcript.value.text;
-    }
-  }, 1000);
+    stopMicrophone();
+    setTimeout(() => {
+      if (
+        !isRecording.value &&
+        !transcript.value.isFinal &&
+        transcript.value.text !== prevText.value
+      ) {
+        console.log("this case");
+        prevText.value = transcript.value.text
+        userText.value = transcript.value.text;
+        sendMessage(transcript.value.text);
+      }
+    }, 3000);
+  }, 300)
 };
-const onBack = async () => {
-  if (state.value === 'started') {
-    await closeConnection()
-  }
-  router.back()
-}
 </script>
 <template>
   <div class="home min-h-[100vh] flex flex-col pt-[20vh] items-center bg-blue-900 py-4 px-4">
@@ -191,11 +191,11 @@ const onBack = async () => {
     <div v-if="iceConnectionState === 'connected'" :class="{'opacity-0': state === 'stopped'}" class="flex space-x-2 mt-4 sm:flex-wrap sm:justify-center">
       <UIButton
         class="z-[2] active:scale-105"
-        @touchstart="startMicrophone"
-        @touchend="onStopRecording"
         @mousedown="startMicrophone"
         @mouseup="onStopRecording"
-      >
+        @touchstart="startMicrophone"
+        @touchend.prevent="onStopRecording"
+        >
         <div class="flex items-center space-x-2">
           <IconRecording v-if="isRecording"/>
           <IconMic v-else/>
