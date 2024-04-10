@@ -3,7 +3,7 @@ import useSystem from '@/composables/useSystem'
 const {errorToast} = useSystem()
 </script>
 <template>
-  <div class="fixed top-1 z-30 flex w-full justify-center" v-if="errorToast.toastIsShown" v-motion :initial="{
+  <div class="fixed top-1 z-[100] flex w-full justify-center" v-if="errorToast.toastIsShown" v-motion :initial="{
     y: -100
 
   }"

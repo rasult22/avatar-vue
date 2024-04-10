@@ -14,6 +14,20 @@ const {
 const isRecording = ref(false)
 
 export default function useMicrophone() {
+  if (microphone.value) {
+    return {
+      microphone,
+      microphoneIsOpen,
+      startMicrophone,
+      stopMicrophone,
+      queue,
+      isRecording,
+      enqueueBlob,
+      removeBlob,
+      firstBlob,
+      queueSize,
+    }
+  }
   const eventer = () =>
     document.visibilityState !== "visible" && stopMicrophone();
   onMounted(() => {

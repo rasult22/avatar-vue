@@ -89,7 +89,9 @@ const keepAlive = () => {
 
 const setupListeners = () => {
   if (connection.value && connection.value.getReadyState() !== undefined) {
-
+    (connection.value as any)._socket.onmessage = (e) => {
+      console.log(e)
+    }
     connection.value.addListener(LiveTranscriptionEvents.Open, () => {
       connectionIsReady.value = true
     })
@@ -109,7 +111,7 @@ const setupListeners = () => {
       console.log(data, 'Metadata')
     })
     connection.value.addListener(LiveTranscriptionEvents.Transcript, (data: LiveTranscriptionEvent) => {
-      // console.log(data, 'Transcript')
+      console.log(data, 'Transcript')
       if (data.channel.alternatives[0].transcript) {
         transcript.value = {
           isFinal: data.is_final,
@@ -122,7 +124,9 @@ const setupListeners = () => {
 
 const clear = () => {
   if (connection.value) {
+    console.log('clearing deepgram')
     connectionIsReady.value = false
+    connection.value.finish()
     connection.value.removeAllListeners()
     connection.value = undefined
   }
@@ -130,10 +134,13 @@ const clear = () => {
 
 export default function useDeepgram(lang: 'ru' | 'en') {
   const start = async () => {
+    console.log('starting deepgram')
     await connect(lang)
     setupListeners()
   }
-  start()
+  setTimeout(() => {
+    start()
+  }, 1000)
 
   watch(connection, () => {
     keepAlive()
@@ -145,6 +152,7 @@ export default function useDeepgram(lang: 'ru' | 'en') {
   return {
     connection,
     isConnecting,
+    clear,
     transcript,
     connectionIsReady
   }
