@@ -12,10 +12,13 @@ import useDeepgram from "@/composables/useDeepgram";
 import useOpenAI from "@/composables/useOpenAI";
 import { useRouter } from "vue-router";
 import useSystem from "@/composables/useSystem";
+import { onClickOutside } from '@vueuse/core'
+
 const router = useRouter()
 const ll = ''
 let isProcessing = ref(false);
 let userText = ref(ll);
+let textToSend = ref<string[]>([])
 let prevText = ref(ll);
 let avatarText = ref(ll);
 let lang = localStorage.getItem('lang') as 'en' | 'ru' | undefined
@@ -42,6 +45,12 @@ const {
 } = useMicroPhone();
 const videoRef = ref<HTMLVideoElement>();
 const canvasRef = ref<HTMLCanvasElement>();
+const recButtonRef = ref<HTMLButtonElement>()
+onClickOutside(recButtonRef, () => {
+  if (isRecording.value) {
+    onStopRecording()
+  }
+})
 const {
   isLoading,
   isGenerating,
@@ -124,7 +133,8 @@ watch(transcript, (val) => {
   userText.value = val.text;
   if (val.isFinal && !gtpIsStreaming.value) {
     prevText.value = val.text;
-    sendMessage(val.text);
+    textToSend.value.push(val.text)
+    // sendMessage(val.text);
   }
 });
 
@@ -133,20 +143,23 @@ const onStopRecording = () => {
   console.log('run')
   setTimeout(() => {
     stopMicrophone();
-    setTimeout(() => {
-      if (
-        !isRecording.value &&
-        !transcript.value.isFinal &&
-        transcript.value.text !== prevText.value
-      ) {
-        console.log("this case");
-        prevText.value = transcript.value.text
-        userText.value = transcript.value.text;
-        sendMessage(transcript.value.text);
-      }
-    }, 3000);
-  }, 300)
+    if (textToSend.value.length) {
+      const finalText =textToSend.value.join(' ')
+      setTimeout(() => {
+        userText.value = finalText
+      }, 400)
+      console.log(finalText)
+      sendMessage(finalText)
+      textToSend.value = []
+    } else if (!transcript.value.isFinal && transcript.value.text) {
+      sendMessage(transcript.value.text)
+      console.log('this case')
+    }
+  }, 1000)
 };
+const test = (e) => {
+  console.log(e)
+}
 </script>
 <template>
   <div class="home min-h-[100vh] flex flex-col pt-[20vh] items-center bg-blue-900 py-4 px-4">
@@ -190,11 +203,13 @@ const onStopRecording = () => {
     </div>
     <div v-if="iceConnectionState === 'connected'" :class="{'opacity-0': state === 'stopped'}" class="flex space-x-2 mt-4 sm:flex-wrap sm:justify-center">
       <UIButton
+        ref="recButtonRef"
         class="z-[2] active:scale-105"
         @mousedown="startMicrophone"
         @mouseup="onStopRecording"
         @touchstart="startMicrophone"
-        @touchend.prevent="onStopRecording"
+        v-touch:longtap="onStopRecording"
+        @touchend="onStopRecording"
         >
         <div class="flex items-center space-x-2">
           <IconRecording v-if="isRecording"/>
