@@ -1,6 +1,5 @@
 import { computed, ref } from "vue";
 
-const API_KEY = process.env.VUE_APP_OPENAI_API_KEY;
 const textArray = ref<string[]>([])
 type Message = {
   role: "user" | "assistant" | "system";
@@ -25,7 +24,7 @@ export default function useOpenAI() {
 }
 
 const sendCompetions = async () => {
-  const url = 'https://c1c9-62-84-32-231.ngrok-free.app/api/completions/'
+  const url = 'http://16.171.170.88:8000/api/completions/'
   return await fetch(url, {
     method: "POST",
     headers: {
