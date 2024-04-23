@@ -2,10 +2,10 @@
 import { useRouter } from 'vue-router';
 
 const r = useRouter()
-  const onSelect = (lang: string) => {
-    localStorage.setItem('lang', lang)
-    r.push('/avatar')
-  }
+const onSelect = (lang: string) => {
+  localStorage.setItem('lang', lang)
+  r.push('/avatar')
+}
 </script>
 <template>
   <div class="home min-h-[100vh] flex flex-col pt-[20vh] items-center bg-blue-900 py-4 px-4">

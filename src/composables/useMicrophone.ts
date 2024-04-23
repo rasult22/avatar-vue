@@ -1,4 +1,4 @@
-import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { onBeforeUnmount, onMounted, ref, watch } from "vue";
 import useQueue from "./useQueue";
 
 let microphone = ref<MediaRecorder>();
@@ -15,7 +15,7 @@ const isRecording = ref(false)
 
 export default function useMicrophone() {
   const eventer = () =>
-    document.visibilityState !== "visible" && stopMicrophone();
+    document.visibilityState !== "visible" && stopMicrophone(); 
   onMounted(() => {
     window.addEventListener("visibilitychange", eventer);
   });

@@ -63,6 +63,19 @@ const {
   start,
 } = useAvatar(videoRef, canvasRef, lang);
 let text = ref("Салам Азамат, как дела?");
+const enWaitingWords = [
+  "Give me a second to gather my thoughts.",
+  "Hold on while I think this through.",
+  "Just a moment, I’m pondering.",
+  "Let me mull this over.",
+  "I need a quick minute to reflect.",
+  "Allow me some time to consider.",
+  "Bear with me as I contemplate.",
+  "I just need a brief moment to deliberate.",
+  "Hang tight, I’m processing.",
+  "Can you give me a short pause to think?"
+];
+const ruWaitingWords = ['Секундочку, дайте мне подумать', 'Позвольте немного подумать.' ,'Сейчас подумаем... Вот!' , 'Аха, подождите немного', 'Давайте подумаем...', 'Позвольте мне взглянуть... Аха']
 
 watch(currentMessage, (v) => {
   if (v) avatarText.value = v
@@ -80,7 +93,51 @@ watch([currentMessage, gtpIsStreaming], ([value]) => {
   
   if (value && !gtpIsStreaming.value) {
     console.log(value)
-    if (value.length > 200) {
+    if (value.length > 2000) {
+      const fn = async () => {  
+        const arr = value.split(' ')
+        const halfIndex = Math.ceil(arr.length / 2);
+
+        //
+        let firstHalf = arr.slice(0, halfIndex)
+        const firstHalfIndex = Math.ceil(firstHalf.length / 2)
+        let firstHalfFirst = firstHalf.slice(0, firstHalfIndex).join(' ')
+        let firstHalfSecond = firstHalf.slice(firstHalfIndex).join('')
+        ///
+        console.log('sending firsthalffirst: ' + firstHalf)
+        await generateVoice(firstHalfFirst)
+        await new Promise((res) => {
+          setTimeout(() => {
+            generateVoice(firstHalfSecond).then(() => {
+              res(0)
+            })
+          }, 2000)
+        })
+        
+        //
+        let secondHalf = arr.slice(halfIndex);
+        const secondHalfHalfIndex = Math.ceil(secondHalf.length / 2)
+        let secondHalfFirst = secondHalf.slice(0, secondHalfHalfIndex).join(' ')
+        let secondHalfSecond = secondHalf.slice(secondHalfHalfIndex).join(' ')
+        //
+        await new Promise((res) => {
+          setTimeout(() => {
+            generateVoice(secondHalfFirst).then(() => {
+              res(0)
+            })
+          }, 2000)
+        })
+        await new Promise((res) => {
+          setTimeout(() => {
+            generateVoice(secondHalfSecond).then(() => {
+              res(0)
+            })
+          }, 2000)
+        })
+      }
+      fn()
+    }
+    if (value.length > 200 && value.length < 2000) {
       console.log (`${value} is longer than 100`)
       console.log ('split it to 2')
       const fn = async () => {  
@@ -97,7 +154,7 @@ watch([currentMessage, gtpIsStreaming], ([value]) => {
       }
       
       fn()
-    } else {
+    } else if (value.length < 200){
       console.log('sending:', value)
       generateVoice(value);
     }
@@ -154,6 +211,13 @@ const onStopRecording = () => {
     } else if (!transcript.value.isFinal && transcript.value.text) {
       sendMessage(transcript.value.text)
       console.log('this case')
+    }
+    if (lang === 'en') {
+      const random = enWaitingWords[Math.floor(Math.random() * enWaitingWords.length)]
+      generateVoice(random)
+    } else {
+      const random = ruWaitingWords[Math.floor(Math.random() * ruWaitingWords.length)]
+      generateVoice(random)
     }
   }, 1000)
 };

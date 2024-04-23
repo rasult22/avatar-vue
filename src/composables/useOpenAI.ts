@@ -6,15 +6,13 @@ type Message = {
   role: "user" | "assistant" | "system";
   content: string;
 };
-const messages = ref<Message[]>([{
-  role: 'system',
-  content: 'Do not write long text. Your limit is 500 symbols. Try to reply only in this limits.'
-}]);
+const messages = ref<Message[]>([]);
 
 const gtpIsStreaming = ref(false)
 const currentMessage = ref("")
 const currentWord = ref("")
 export default function useOpenAI() {
+
   return {
     currentMessage,
     textArr: textArray,
@@ -27,20 +25,14 @@ export default function useOpenAI() {
 }
 
 const sendCompetions = async () => {
-  return await fetch("https://api.openai.com/v1/chat/completions", {
+  const url = 'https://c1c9-62-84-32-231.ngrok-free.app/api/completions/'
+  return await fetch(url, {
     method: "POST",
     headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${API_KEY}`,
+      "Content-Type": "application/json"
     },
-    body: JSON.stringify({
-      model: "gpt-3.5-turbo",
-      temperature: 0.7,
-      stream: true,
-      max_tokens: 1000,
-      messages: messages.value,
-    }),
-  });
+    body: JSON.stringify(messages.value),
+  }).then(r => r.json());
 };
 
 const sendMessage = async (text: string) => {
@@ -48,53 +40,59 @@ const sendMessage = async (text: string) => {
     role: "user",
     content: text,
   });
-  const stream = await sendCompetions();
   gtpIsStreaming.value = true
-  const reader = stream.body.getReader();
-  const decoder = new TextDecoder("utf-8");
+  const response_message = await sendCompetions();
+  gtpIsStreaming.value = false
+  currentMessage.value = response_message
+  messages.value.push({
+    role: 'assistant',
+    content: response_message
+  })
+  // const reader = stream.body.getReader();
+  // const decoder = new TextDecoder("utf-8");
 
-  while (true) {
-    const { done, value } = await reader.read();
+  // while (true) {
+  //   const { done, value } = await reader.read();
 
-    if (done) break;
-    // Massage and parse the chunk of data
-    const chunk = decoder.decode(value);
-     // Clean up the data
-    const lines = chunk
-    .split("\n")
-    .map((line) => line.replace("data: ", ""))
-    .filter((line) => line.length > 0)
-    .filter((line) => line !== "[DONE]")
-    .map((line) => {
-      try {
-        return JSON.parse(line)
-      } catch {
-        console.log(line)
-        return ""
-      }
-    });
+  //   if (done) break;
+  //   // Massage and parse the chunk of data
+  //   const chunk = decoder.decode(value);
+  //    // Clean up the data
+  //   const lines = chunk
+  //   .split("\n")
+  //   .map((line) => line.replace("data: ", ""))
+  //   .filter((line) => line.length > 0)
+  //   .filter((line) => line !== "[DONE]")
+  //   .map((line) => {
+  //     try {
+  //       return JSON.parse(line)
+  //     } catch {
+  //       console.log(line)
+  //       return ""
+  //     }
+  //   });
   
-    for (const parsedLine of lines) {
-      const { choices } = parsedLine;
-      if (choices && choices.length) {
-        const { delta, finish_reason } = choices[0];
-        const { content } = delta;
+  //   for (const parsedLine of lines) {
+  //     const { choices } = parsedLine;
+  //     if (choices && choices.length) {
+  //       const { delta, finish_reason } = choices[0];
+  //       const { content } = delta;
         
-        if (content) {
-          // currentWord.value = content
-          currentMessage.value += content
+  //       if (content) {
+  //         // currentWord.value = content
+  //         currentMessage.value += content
   
-          textArray.value.push(content)
-        }
-        if (finish_reason) {
-          gtpIsStreaming.value = false
-          messages.value.push({
-            role: 'assistant',
-            content: currentMessage.value
-          })
-          // currentMessage.value = ""
-        }
-      }
-    }
-  }
+  //         textArray.value.push(content)
+  //       }
+  //       if (finish_reason) {
+  //         gtpIsStreaming.value = false
+  //         messages.value.push({
+  //           role: 'assistant',
+  //           content: currentMessage.value
+  //         })
+  //         // currentMessage.value = ""
+  //       }
+  //     }
+  //   }
+  // }
 }
