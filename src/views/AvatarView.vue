@@ -282,7 +282,11 @@ const test = (e) => {
           <UISpinner  v-if="isRecording"/>
         </div>
       </UIButton>
-      <UIButton class="z-[2] active:scale-105" @click="clearMessages">
+      <UIButton class="z-[2] active:scale-105" @click="() => {
+        clearMessages()
+        avatarText = ''
+        userText = ''
+      }">
         {{lang ==='ru' ? 'Очистить чат' : 'Clear chat'}}
       </UIButton>
     </div>

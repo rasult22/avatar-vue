@@ -111,7 +111,7 @@ function saveMessages () {
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      text: messages.value.map(m => `${m.role}: ${m.content}`).join('\n')
+      text: messages.value.map(m => `<p><b>${m.role}</b>: ${m.content}</p>`).join('\n')
     })
   })
 }
