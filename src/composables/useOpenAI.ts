@@ -5,7 +5,12 @@ type Message = {
   role: "user" | "assistant" | "system";
   content: string;
 };
-const messages = ref<Message[]>([]);
+const messages = ref<Message[]>([
+  // {
+  //   role: 'system',
+  //   content: 'be concise, no fluff'
+  // }
+]);
 
 const gtpIsStreaming = ref(false)
 const currentMessage = ref("")
@@ -19,6 +24,7 @@ export default function useOpenAI() {
     currentWord,
     gtpIsStreaming,
     messages,
+    clearMessages: () => messages.value=[],
     sendMessage
   };
 }
@@ -48,6 +54,8 @@ const sendMessage = async (text: string) => {
     role: 'assistant',
     content: response_message
   })
+  // тут нужно сохранить ответ в pocketbase
+  saveMessages()
   // const reader = stream.body.getReader();
   // const decoder = new TextDecoder("utf-8");
 
@@ -95,4 +103,15 @@ const sendMessage = async (text: string) => {
   //     }
   //   }
   // }
+}
+function saveMessages () {
+  fetch('https://rasult22.pockethost.io/api/collections/avatar_history/records', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      text: messages.value.map(m => `${m.role}: ${m.content}`).join('\n')
+    })
+  })
 }

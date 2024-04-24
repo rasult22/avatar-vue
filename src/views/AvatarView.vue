@@ -29,6 +29,7 @@ const {
   currentMessage,
   gtpIsStreaming,
   currentWord,
+  clearMessages
 } = useOpenAI();
 const { connection, isConnecting, transcript, connectionIsReady } =
   useDeepgram(lang || "en");
@@ -280,6 +281,9 @@ const test = (e) => {
           <IconMic v-else/>
           <UISpinner  v-if="isRecording"/>
         </div>
+      </UIButton>
+      <UIButton class="z-[2] active:scale-105" @click="clearMessages">
+        {{lang ==='ru' ? 'Очистить чат' : 'Clear chat'}}
       </UIButton>
     </div>
     <div :class="{'opacity-0': state === 'stopped'}" class="w-full justify-center">
