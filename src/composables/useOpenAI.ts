@@ -5,6 +5,7 @@ type Message = {
   role: "user" | "assistant" | "system";
   content: string;
 };
+const collectionId = ref("")
 const messages = ref<Message[]>([
   // {
   //   role: 'system',
@@ -24,7 +25,10 @@ export default function useOpenAI() {
     currentWord,
     gtpIsStreaming,
     messages,
-    clearMessages: () => messages.value=[],
+    clearMessages: () => {
+      messages.value=[]
+      collectionId.value = ""
+    },
     sendMessage
   };
 }
@@ -105,13 +109,28 @@ const sendMessage = async (text: string) => {
   // }
 }
 function saveMessages () {
-  fetch('https://rasult22.pockethost.io/api/collections/avatar_history/records', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      text: messages.value.map(m => `<p><b>${m.role}</b>: ${m.content}</p>`).join('\n')
+  if (!collectionId.value) {
+    fetch('https://rasult22.pockethost.io/api/collections/avatar_history/records', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        text: messages.value.map(m => `<p><b>${m.role}</b>: ${m.content}</p>`).join('\n')
+      })
+    }).then(data => data.json()).then(data => {
+      console.log(data)
+      collectionId.value = data.id
     })
-  })
+  } else {
+    fetch('https://rasult22.pockethost.io/api/collections/avatar_history/records/' + collectionId.value, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        text: messages.value.map(m => `<p><b>${m.role}</b>: ${m.content}</p>`).join('\n')
+      })
+    })
+  }
 }

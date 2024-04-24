@@ -138,7 +138,7 @@ watch([currentMessage, gtpIsStreaming], ([value]) => {
       }
       fn()
     }
-    if (value.length > 200 && value.length < 2000) {
+    if (value.length > 200 && value.length <= 2000) {
       console.log (`${value} is longer than 100`)
       console.log ('split it to 2')
       const fn = async () => {  
@@ -155,7 +155,7 @@ watch([currentMessage, gtpIsStreaming], ([value]) => {
       }
       
       fn()
-    } else if (value.length < 200){
+    } else if (value.length <= 200){
       console.log('sending:', value)
       generateVoice(value);
     }
