@@ -24,12 +24,13 @@ export default function useOpenAI() {
 }
 
 const sendCompetions = async () => {
-  const url = 'http://16.171.170.88:8000/api/completions/'
+  const url = 'https://avatar.galimzhanov.com/apiv2/completions/'
   return await fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
     },
+    
     body: JSON.stringify(messages.value),
   }).then(r => r.json());
 };
